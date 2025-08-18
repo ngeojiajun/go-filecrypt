@@ -30,4 +30,6 @@ var (
 	ErrInvalidLength = errors.New("invalid length specified for the operation")
 
 	ErrInternalError = errors.New("internal error occurred, please check the implementation")
+
+	ErrKeySizeInvalid = errors.New("the size of the key provided is not compatible with the mode specified")
 )
