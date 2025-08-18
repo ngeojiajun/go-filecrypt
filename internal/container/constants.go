@@ -33,6 +33,18 @@ const (
 	EncAlgEnd
 )
 
+// How much the size of its key is in bytes
+func (v EncryptionAlgorithm) KeySize() int {
+	switch v {
+	case EncAlgAESCTR128:
+		return 16
+	case EncAlgAESCTR256:
+		return 24
+	default:
+		panic("EncryptionAlgorithm::KeySize called on invalid value")
+	}
+}
+
 // Slot key algorithms
 const (
 	SlotKeyAlgAESGCM128 SlotKeyAlgorithm = iota // Direct AES-128 key is used to decrypt the slot in GCM mode
