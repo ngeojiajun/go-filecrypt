@@ -176,3 +176,11 @@ func (f *ContainerFile) DecryptStream(writer io.Writer) error {
 	_, err = ic.AESCTRStreamDecryptAuthenticatedEx(keys[0], iv, keys[1], f.file, writer)
 	return err
 }
+
+// Close the file
+func (f *ContainerFile) Close() error {
+	if f.file != nil {
+		return f.file.Close()
+	}
+	return nil
+}

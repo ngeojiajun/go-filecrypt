@@ -33,7 +33,7 @@ func NewContainerKeySlot(alg SlotKeyAlgorithm, flags uint16, rootKey, slotKey []
 	}
 	switch alg {
 	case SlotKeyAlgAESGCM128:
-		if len(slotKey) != 16 {
+		if len(slotKey) != alg.KeySize() {
 			return nil, ic.ErrKeySizeInvalid
 		}
 		slot.SlotContent, err = ic.AESGCMEncryptDirect(slotKey, rootKey, nil)
