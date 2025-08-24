@@ -6,6 +6,8 @@ import (
 
 	ic "github.com/ngeojiajun/go-filecrypt/internal/cipher"
 	container "github.com/ngeojiajun/go-filecrypt/internal/container"
+	types "github.com/ngeojiajun/go-filecrypt/pkg/types"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,7 +21,7 @@ func TestContainerSerializationSanity(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to generate slot key: %v", err)
 	}
-	slot, err := container.NewContainerKeySlot(container.SlotKeyAlgAESGCM128, 0, rootKey, slotKey)
+	slot, err := container.NewContainerKeySlot(types.SlotKeyAlgAESGCM128, 0, rootKey, slotKey)
 	if err != nil {
 		t.Fatalf("Failed to create slot: %v", err)
 	}
@@ -27,7 +29,7 @@ func TestContainerSerializationSanity(t *testing.T) {
 		VersionMajor: 1,
 		VersionMinor: 0,
 		Flags:        0,
-		Algorithm:    container.EncAlgAESCTR128,
+		Algorithm:    types.EncAlgAESCTR128,
 		Slots: []*container.ContainerKeySlot{
 			slot,
 		},

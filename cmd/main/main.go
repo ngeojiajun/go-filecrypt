@@ -12,7 +12,8 @@ import (
 	"log"
 	"os"
 
-	container "github.com/ngeojiajun/go-filecrypt/internal/container"
+	container "github.com/ngeojiajun/go-filecrypt/pkg/container"
+	types "github.com/ngeojiajun/go-filecrypt/pkg/types"
 )
 
 type config struct {
@@ -56,9 +57,9 @@ func parseFlags() (*config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid hex key: %w", err)
 	}
-	if len(key) != container.SlotKeyAlgAESGCM128.KeySize() {
+	if len(key) != types.SlotKeyAlgAESGCM128.KeySize() {
 		return nil, fmt.Errorf("invalid key length: expected %d hex characters",
-			2*container.SlotKeyAlgAESGCM128.KeySize())
+			2*types.SlotKeyAlgAESGCM128.KeySize())
 	}
 
 	return &config{
@@ -100,11 +101,11 @@ func main() {
 	}
 	var fileContainer *container.ContainerFile
 	if cfg.encrypt {
-		fileContainer, err = container.NewContainerFile(cfg.to, container.EncAlgAESCTR256)
+		fileContainer, err = container.NewContainerFile(cfg.to, types.EncAlgAESCTR256)
 		if err != nil {
 			log.Fatalf("IO error happened, while creating the file: %v", err)
 		}
-		err = fileContainer.AddKeySlot(container.SlotKeyAlgAESGCM128, cfg.key)
+		err = fileContainer.AddKeySlot(types.SlotKeyAlgAESGCM128, cfg.key)
 		if err == nil {
 			err = fileContainer.WriteHeader()
 		}
@@ -118,7 +119,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("Error happened, while opening the file: %v", err)
 		}
-		err = fileContainer.Unseal(container.SlotKeyAlgAESGCM128, cfg.key)
+		err = fileContainer.Unseal(types.SlotKeyAlgAESGCM128, cfg.key)
 		if err != nil {
 			log.Fatalf("Error happened, while opening the file: %v", err)
 		}

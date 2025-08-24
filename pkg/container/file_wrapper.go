@@ -6,10 +6,12 @@ import (
 	"os"
 
 	ic "github.com/ngeojiajun/go-filecrypt/internal/cipher"
+	container_internal "github.com/ngeojiajun/go-filecrypt/internal/container"
+	types "github.com/ngeojiajun/go-filecrypt/pkg/types"
 )
 
-// File: internal/container/file_wrapper.go
-// This file contains APIs that wrapping the os.File
+// File: pkg/container/file_wrapper.go
+// This file contains APIs that dealing with file IO
 
 const (
 	containerCiphertextOffset = 4096 // Offset to real cipher text
@@ -23,15 +25,15 @@ var (
 )
 
 type ContainerFile struct {
-	file    *os.File             // pointer to its backing file
-	header  *ContainerFileHeader // pointer to the header and slot
-	rootKey []byte               // the root key
+	file    *os.File                                // pointer to its backing file
+	header  *container_internal.ContainerFileHeader // pointer to the header and slot
+	rootKey []byte                                  // the root key
 }
 
 // Create a new container file
-func NewContainerFile(name string, alg EncryptionAlgorithm) (*ContainerFile, error) {
-	if alg >= EncAlgEnd {
-		return nil, ErrUnsupportedEncAlgo
+func NewContainerFile(name string, alg types.EncryptionAlgorithm) (*ContainerFile, error) {
+	if alg >= types.EncAlgEnd {
+		return nil, types.ErrUnsupportedEncAlgo
 	}
 	fileHandler, err := os.Create(name)
 	if err != nil {
@@ -41,18 +43,18 @@ func NewContainerFile(name string, alg EncryptionAlgorithm) (*ContainerFile, err
 }
 
 // Create a new container file with an already opened handle
-func NewContainerFileWithHandle(handle *os.File, alg EncryptionAlgorithm) (*ContainerFile, error) {
-	if alg >= EncAlgEnd {
-		return nil, ErrUnsupportedEncAlgo
+func NewContainerFileWithHandle(handle *os.File, alg types.EncryptionAlgorithm) (*ContainerFile, error) {
+	if alg >= types.EncAlgEnd {
+		return nil, types.ErrUnsupportedEncAlgo
 	}
 	file := &ContainerFile{
 		file: handle,
-		header: &ContainerFileHeader{
+		header: &container_internal.ContainerFileHeader{
 			VersionMajor: 1,
 			VersionMinor: 0,
 			Flags:        0,
 			Algorithm:    alg,
-			Slots:        []*ContainerKeySlot{},
+			Slots:        []*container_internal.ContainerKeySlot{},
 		},
 		rootKey: []byte{},
 	}
@@ -81,7 +83,7 @@ func OpenContainerFileWithHandle(handle *os.File) (*ContainerFile, error) {
 		rootKey: []byte{},
 	}
 	var err error
-	file.header, err = ParseContainerFileHeader(handle)
+	file.header, err = container_internal.ParseContainerFileHeader(handle)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +91,7 @@ func OpenContainerFileWithHandle(handle *os.File) (*ContainerFile, error) {
 }
 
 // Try to unseal the key
-func (f *ContainerFile) Unseal(alg SlotKeyAlgorithm, slotKey []byte) error {
+func (f *ContainerFile) Unseal(alg types.SlotKeyAlgorithm, slotKey []byte) error {
 	if len(f.rootKey) != 0 {
 		return ErrRootKeyAlreadyUnsealed
 	}
@@ -107,11 +109,11 @@ func (f *ContainerFile) Unseal(alg SlotKeyAlgorithm, slotKey []byte) error {
 }
 
 // Add a key to the key slot
-func (f *ContainerFile) AddKeySlot(alg SlotKeyAlgorithm, slotKey []byte) error {
+func (f *ContainerFile) AddKeySlot(alg types.SlotKeyAlgorithm, slotKey []byte) error {
 	if len(f.rootKey) == 0 {
 		return ErrRootKeySealed
 	}
-	slot, err := NewContainerKeySlot(alg, 0, f.rootKey, slotKey)
+	slot, err := container_internal.NewContainerKeySlot(alg, 0, f.rootKey, slotKey)
 	if err != nil {
 		return err
 	}
@@ -124,7 +126,7 @@ func (f *ContainerFile) WriteHeader() error {
 	if _, err := f.file.Seek(0, io.SeekStart); err != nil {
 		return err
 	}
-	return WriteContainerFileHeader(f.file, f.header)
+	return container_internal.WriteContainerFileHeader(f.file, f.header)
 }
 
 // Encrypt the stream until EOF

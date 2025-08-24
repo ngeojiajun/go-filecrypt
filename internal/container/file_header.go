@@ -5,6 +5,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+
+	types "github.com/ngeojiajun/go-filecrypt/pkg/types"
 )
 
 // File: internal/container/file_header.go
@@ -22,26 +24,26 @@ import (
 // ContainerFileHeader defines the structure of the file header for encrypted files.
 // It is 4KB aligned
 type ContainerFileHeader struct {
-	VersionMajor uint8               // Major version of the file format
-	VersionMinor uint8               // Minor version of the file format
-	Flags        uint16              // Flags for additional options
-	Algorithm    EncryptionAlgorithm // Encryption algorithm used
-	Slots        []*ContainerKeySlot // Slots containing keys for decryption
+	VersionMajor uint8                     // Major version of the file format
+	VersionMinor uint8                     // Minor version of the file format
+	Flags        uint16                    // Flags for additional options
+	Algorithm    types.EncryptionAlgorithm // Encryption algorithm used
+	Slots        []*ContainerKeySlot       // Slots containing keys for decryption
 }
 
 // ParseContainerFileHeader parses the file header from the provided reader.
 // It returns a ContainerFileHeader or an error if parsing fails.
 func ParseContainerFileHeader(reader io.Reader) (*ContainerFileHeader, error) {
 	if reader == nil {
-		return nil, ErrParameterMissing
+		return nil, types.ErrParameterMissing
 	}
 	var header ContainerFileHeader
 	data := make([]byte, 4096) // Read 4KB for the header
 	if _, err := io.ReadFull(reader, data); err != nil {
 		return nil, err
 	}
-	if !bytes.Equal(data[:4], FileMagicNumber) {
-		return nil, ErrInvalidFileHeader
+	if !bytes.Equal(data[:4], types.FileMagicNumber) {
+		return nil, types.ErrInvalidFileHeader
 	}
 	// Create a scoped reader to read the rest of the header
 	scopedReader := bytes.NewReader(data[4:])
@@ -56,23 +58,23 @@ func ParseContainerFileHeader(reader io.Reader) (*ContainerFileHeader, error) {
 	}
 	// We support only one version for now
 	if header.VersionMajor != 1 || header.VersionMinor != 0 {
-		return nil, ErrUnsupportedVersion
+		return nil, types.ErrUnsupportedVersion
 	}
 	if err = binary.Read(scopedReader, binary.BigEndian, &header.Flags); err != nil {
-		return nil, ErrInvalidFileHeader
+		return nil, types.ErrInvalidFileHeader
 	}
 	if err = binary.Read(scopedReader, binary.BigEndian, (*uint16)(&header.Algorithm)); err != nil {
-		return nil, ErrInvalidFileHeader
+		return nil, types.ErrInvalidFileHeader
 	}
-	if header.Algorithm >= EncAlgEnd {
-		return nil, ErrUnsupportedEncAlgo
+	if header.Algorithm >= types.EncAlgEnd {
+		return nil, types.ErrUnsupportedEncAlgo
 	}
 	var nslots uint8
 	if nslots, err = scopedReader.ReadByte(); err != nil {
-		return nil, ErrInvalidFileHeader
+		return nil, types.ErrInvalidFileHeader
 	}
 	if nslots == 0 {
-		return nil, ErrEmptySlotContent
+		return nil, types.ErrEmptySlotContent
 	}
 	header.Slots = make([]*ContainerKeySlot, nslots)
 	for i := uint8(0); i < nslots; i++ {
@@ -89,18 +91,18 @@ func ParseContainerFileHeader(reader io.Reader) (*ContainerFileHeader, error) {
 // It returns an error if writing fails.
 func WriteContainerFileHeader(writer io.Writer, header *ContainerFileHeader) error {
 	if writer == nil || header == nil {
-		return ErrParameterMissing
+		return types.ErrParameterMissing
 	}
 	nslots := len(header.Slots)
 	if nslots == 0 {
-		return ErrEmptySlotContent
+		return types.ErrEmptySlotContent
 	}
 	if nslots > 255 {
-		return ErrSlotTooMuch
+		return types.ErrSlotTooMuch
 	}
 	buffer := bytes.NewBuffer(nil)
 	// Write te magic number first
-	if _, err := buffer.Write(FileMagicNumber); err != nil {
+	if _, err := buffer.Write(types.FileMagicNumber); err != nil {
 		return err
 	}
 	if _, err := buffer.Write([]byte{header.VersionMajor, header.VersionMinor}); err != nil {
@@ -121,7 +123,7 @@ func WriteContainerFileHeader(writer io.Writer, header *ContainerFileHeader) err
 		}
 	}
 	if buffer.Len() > 4096 {
-		return ErrProducedHeaderTooBig
+		return types.ErrProducedHeaderTooBig
 	}
 	paddingBytesNeeded := 4096 - buffer.Len()
 	if paddingBytesNeeded > 0 {
@@ -139,8 +141,8 @@ func containerReadSlot(reader *bytes.Reader, slot *ContainerKeySlot) error {
 	if err := binary.Read(reader, binary.BigEndian, (*uint16)(&slot.SlotKeyAlgorithm)); err != nil {
 		return err
 	}
-	if slot.SlotKeyAlgorithm >= SlotKeyAlgEnd {
-		return ErrUnsupportedSlotAlgo
+	if slot.SlotKeyAlgorithm >= types.SlotKeyAlgEnd {
+		return types.ErrUnsupportedSlotAlgo
 	}
 	if err := binary.Read(reader, binary.BigEndian, &slot.Flags); err != nil {
 		return err

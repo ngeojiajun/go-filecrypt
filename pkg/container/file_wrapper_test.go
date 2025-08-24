@@ -6,7 +6,8 @@ import (
 	"testing"
 
 	ic "github.com/ngeojiajun/go-filecrypt/internal/cipher"
-	container "github.com/ngeojiajun/go-filecrypt/internal/container"
+	container_pkg "github.com/ngeojiajun/go-filecrypt/pkg/container"
+	types "github.com/ngeojiajun/go-filecrypt/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,9 +20,9 @@ func TestFileWrapperSanity(t *testing.T) {
 	slotKey, err := ic.GenerateRandomBytes(16)
 	assert.NoError(t, err, "cannot generate slot key")
 	//Create a container first
-	encryptedContainer, err := container.NewContainerFileWithHandle(file, container.EncAlgAESCTR128)
+	encryptedContainer, err := container_pkg.NewContainerFileWithHandle(file, types.EncAlgAESCTR128)
 	assert.NoError(t, err, "cannot create container")
-	err = encryptedContainer.AddKeySlot(container.SlotKeyAlgAESGCM128, slotKey)
+	err = encryptedContainer.AddKeySlot(types.SlotKeyAlgAESGCM128, slotKey)
 	assert.NoError(t, err, "cannot add slot")
 	// Flush the headers
 	err = encryptedContainer.WriteHeader()
@@ -45,9 +46,9 @@ func TestFileWrapperSeparated(t *testing.T) {
 	slotKey, err := ic.GenerateRandomBytes(16)
 	assert.NoError(t, err, "cannot generate slot key")
 	//Create a container first
-	encryptedContainer, err := container.NewContainerFileWithHandle(file, container.EncAlgAESCTR128)
+	encryptedContainer, err := container_pkg.NewContainerFileWithHandle(file, types.EncAlgAESCTR128)
 	assert.NoError(t, err, "cannot create container")
-	err = encryptedContainer.AddKeySlot(container.SlotKeyAlgAESGCM128, slotKey)
+	err = encryptedContainer.AddKeySlot(types.SlotKeyAlgAESGCM128, slotKey)
 	assert.NoError(t, err, "cannot add slot")
 	// Flush the headers
 	err = encryptedContainer.WriteHeader()
@@ -59,10 +60,10 @@ func TestFileWrapperSeparated(t *testing.T) {
 	assert.NoError(t, err, "cannot close the file")
 
 	// Open the new handle
-	encryptedContainer, err = container.OpenContainerFile(file.Name())
+	encryptedContainer, err = container_pkg.OpenContainerFile(file.Name())
 	assert.NoError(t, err, "cannot open the container")
 	// Try to unseal the key
-	err = encryptedContainer.Unseal(container.SlotKeyAlgAESGCM128, slotKey)
+	err = encryptedContainer.Unseal(types.SlotKeyAlgAESGCM128, slotKey)
 	assert.NoError(t, err, "cannot unseal the root key")
 	// Now decrypt the file
 	buf := bytes.NewBuffer(nil)

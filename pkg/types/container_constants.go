@@ -1,8 +1,9 @@
-package container
+package types
 
-// File: internal/container/constants.go
-// This file defines constants and error messages used in the container package.
+// File: pkg/types/container_constants.go
+// This file defines constants and error messages used in the container related packages.
 // It includes magic numbers, error messages, and encryption algorithm identifiers.
+
 import (
 	"errors"
 )
