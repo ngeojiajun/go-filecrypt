@@ -93,7 +93,13 @@ func WriteContainerFileHeader(writer io.Writer, header *ContainerFileHeader) err
 	if writer == nil || header == nil {
 		return types.ErrParameterMissing
 	}
-	nslots := len(header.Slots)
+	var slots []*ContainerKeySlot = make([]*ContainerKeySlot, 0, len(header.Slots))
+	for _, slot := range header.Slots {
+		if slot.Flags&FlagSlotDestroyed == 0 {
+			slots = append(slots, slot)
+		}
+	}
+	nslots := len(slots)
 	if nslots == 0 {
 		return types.ErrEmptySlotContent
 	}
@@ -117,8 +123,8 @@ func WriteContainerFileHeader(writer io.Writer, header *ContainerFileHeader) err
 	if err := buffer.WriteByte((uint8)(nslots)); err != nil {
 		return err
 	}
-	for i := range header.Slots {
-		if err := containerWriteSlot(buffer, header.Slots[i]); err != nil {
+	for _, slot := range slots {
+		if err := containerWriteSlot(buffer, slot); err != nil {
 			return err
 		}
 	}

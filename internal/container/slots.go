@@ -1,12 +1,18 @@
 package container
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+
 	ic "github.com/ngeojiajun/go-filecrypt/internal/cipher"
 	types "github.com/ngeojiajun/go-filecrypt/pkg/types"
 )
 
 // File: internal/container/slots.go
 // This file contain APIs for dealing with slot
+
+// The slot is marked as destroyed
+const FlagSlotDestroyed uint16 = 1 << 15
 
 type ContainerKeySlot struct {
 	SlotKeyAlgorithm types.SlotKeyAlgorithm // Algorithm used for the slot encryption
@@ -67,5 +73,24 @@ func (slot *ContainerKeySlot) Unseal(slotkey []byte) (rootkey []byte, err error)
 		return ic.AESGCMDecryptDirect(slotkey, slot.SlotContent, nil)
 	default:
 		return nil, types.ErrUnsupportedSlotAlgo
+	}
+}
+
+// Destroy the slot itself
+func (slot *ContainerKeySlot) Destroy() {
+	slot.Flags = FlagSlotDestroyed
+	slot.Size = 0
+	slot.SlotKeyAlgorithm = types.SlotKeyAlgEnd
+	ic.WipeBufferSecure(slot.SlotContent)
+}
+
+// Get the slot infomation that can be rendered. Optionally the index can be passed to show the index in the file
+func (slot *ContainerKeySlot) Info(index int) *types.ContainerSlotInfo {
+	hash := sha256.New()
+	id := hex.EncodeToString(hash.Sum(slot.SlotContent))
+	return &types.ContainerSlotInfo{
+		Id:    id,
+		Alg:   slot.SlotKeyAlgorithm,
+		Index: index,
 	}
 }

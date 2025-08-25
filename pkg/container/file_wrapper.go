@@ -22,6 +22,9 @@ var (
 	ErrRootKeySealed          = errors.New("the root key is currently sealed")
 	ErrRootKeyAlreadyUnsealed = errors.New("the root key is already unsealed")
 	ErrRootKeyUnsealFailed    = errors.New("the root key could not be unsealed")
+	ErrSlotInvalidRemove      = errors.New("cannot remove the slot as it is the only slot remaining or the no slot could be matched")
+	ErrSlotDuplicated         = errors.New("there is already a slot which match the parameter given")
+	ErrNoSlots                = errors.New("no slots is configured on the file")
 )
 
 type ContainerFile struct {
@@ -90,20 +93,47 @@ func OpenContainerFileWithHandle(handle *os.File) (*ContainerFile, error) {
 	return file, nil
 }
 
-// Try to unseal the key
-func (f *ContainerFile) Unseal(alg types.SlotKeyAlgorithm, slotKey []byte) error {
-	if len(f.rootKey) != 0 {
-		return ErrRootKeyAlreadyUnsealed
+// Get slot information
+func (f *ContainerFile) GetSlots() []*types.ContainerSlotInfo {
+	slots := make([]*types.ContainerSlotInfo, 0, len(f.header.Slots))
+	for i, slot := range f.header.Slots {
+		slots = append(slots, slot.Info(i))
 	}
-	for _, slot := range f.header.Slots {
+	return slots
+}
+
+// Search the slot which match the incoming crypto info
+func (f *ContainerFile) findMatchingSlot(alg types.SlotKeyAlgorithm, slotKey []byte) (rootKey []byte, index int) {
+	for index, slot := range f.header.Slots {
 		// Attempt the slots one by one
 		if slot.SlotKeyAlgorithm != alg {
 			continue
 		}
 		if rootKey, err := slot.Unseal(slotKey); err == nil {
-			f.rootKey = rootKey
-			return nil
+			return rootKey, index
 		}
+	}
+	return nil, -1
+}
+
+// Seal the root key
+func (f *ContainerFile) Seal() error {
+	if len(f.header.Slots) == 0 {
+		return ErrNoSlots
+	}
+	ic.WipeBufferSecure(f.rootKey)
+	f.rootKey = nil
+	return nil
+}
+
+// Try to unseal the key
+func (f *ContainerFile) Unseal(alg types.SlotKeyAlgorithm, slotKey []byte) error {
+	if len(f.rootKey) != 0 {
+		return ErrRootKeyAlreadyUnsealed
+	}
+	if rootKey, _ := f.findMatchingSlot(alg, slotKey); rootKey != nil {
+		f.rootKey = rootKey
+		return nil
 	}
 	return ErrRootKeyUnsealFailed
 }
@@ -113,11 +143,26 @@ func (f *ContainerFile) AddKeySlot(alg types.SlotKeyAlgorithm, slotKey []byte) e
 	if len(f.rootKey) == 0 {
 		return ErrRootKeySealed
 	}
+	if _, index := f.findMatchingSlot(alg, slotKey); index != -1 {
+		return ErrSlotDuplicated
+	}
 	slot, err := container_internal.NewContainerKeySlot(alg, 0, f.rootKey, slotKey)
 	if err != nil {
 		return err
 	}
 	f.header.Slots = append(f.header.Slots, slot)
+	return nil
+}
+
+// Remove the key slot by index
+func (f *ContainerFile) RemoveKeySlotByIndex(index int) error {
+	if len(f.header.Slots) < 2 {
+		return ErrSlotInvalidRemove
+	}
+	if index >= len(f.header.Slots) {
+		return ErrSlotInvalidRemove
+	}
+	f.header.Slots[index].Destroy()
 	return nil
 }
 

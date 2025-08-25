@@ -11,6 +11,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"runtime"
 
 	"golang.org/x/crypto/hkdf"
 )
@@ -127,4 +128,20 @@ func DeriveKeysFromMasterKeyEx(masterKey, salt []byte, keySizes []int) (keys [][
 		}
 	}
 	return keys, nil
+}
+
+// Securely wipe the content of a buffer
+//
+//go:noinline
+func WipeBufferSecure(buf []byte) {
+	if buf == nil {
+		return
+	}
+	// var p runtime.Pinner
+	// p.Pin(buf)
+	// defer p.Unpin()
+	for i := range buf {
+		buf[i] = 0
+	}
+	runtime.KeepAlive(buf)
 }
