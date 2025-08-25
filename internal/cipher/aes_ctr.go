@@ -40,6 +40,33 @@ func aesCTRNewStream(key, iv []byte) (stream cipher.Stream, err error) {
 	return
 }
 
+// Represent a stream reader where any bytes readed will be decrypted
+// TODO: allow seek
+type AESCTRStreamReader struct {
+	base    io.Reader
+	context cipher.Stream
+}
+
+// Create a new stream reader
+func NewAESCTRStreamReader(underlaying io.Reader, key, iv []byte) (*AESCTRStreamReader, error) {
+	context, err := aesCTRNewStream(key, iv)
+	if err != nil {
+		return nil, err
+	}
+	return &AESCTRStreamReader{
+		base:    underlaying,
+		context: context,
+	}, nil
+}
+
+func (ctx *AESCTRStreamReader) Read(p []byte) (int, error) {
+	n, err := ctx.base.Read(p)
+	if n > 0 {
+		ctx.context.XORKeyStream(p[:n], p[:n])
+	}
+	return n, err
+}
+
 // AESCTREncryptDirect encrypts plaintext using AES CTR with the provided key and iv.
 // It returns the ciphertext or an error if encryption fails.
 //

@@ -2,6 +2,7 @@ package cipher_test
 
 import (
 	"bytes"
+	"io"
 	"testing"
 
 	ic "github.com/ngeojiajun/go-filecrypt/internal/cipher"
@@ -24,6 +25,28 @@ func TestAESCTRCipherNormal(t *testing.T) {
 	assert.NoError(t, err, "Decryption failed")
 
 	assert.Equal(t, string(plaintext), string(decrypted), "Decrypted text does not match original")
+}
+
+// Test the normal AES-CTR encryption and decryption without authentication but one of it using the reader API.
+func TestAESCTRCipherStreaming(t *testing.T) {
+	plaintext := []byte("This is a test message.")
+	key, err := ic.GenerateRandomBytes(32) // AES-256 key size
+	assert.NoError(t, err, "Failed to generate key")
+
+	iv, err := ic.GenerateRandomBytes(16) // AES block size for CTR mode
+	assert.NoError(t, err, "Failed to generate IV")
+
+	ciphertext, err := ic.AESCTREncryptDirect(key, plaintext, iv)
+	assert.NoError(t, err, "Encryption failed")
+
+	ciphertextReader := bytes.NewBuffer(ciphertext)
+	decrypted := bytes.NewBuffer(nil)
+	decryptionStream, err := ic.NewAESCTRStreamReader(ciphertextReader, key, iv)
+	assert.NoError(t, err, "Cannot create decryption stream")
+	_, err = io.Copy(decrypted, decryptionStream)
+	assert.NoError(t, err, "Decryption failed")
+
+	assert.Equal(t, string(plaintext), decrypted.String(), "Decrypted text does not match original")
 }
 
 // Test AES-CTR encryption and decryption with HMAC-SHA256 authentication.

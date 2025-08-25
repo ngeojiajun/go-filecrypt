@@ -1,12 +1,14 @@
 package container
 
 import (
+	"crypto/sha256"
 	"errors"
 	"io"
 	"os"
 
 	ic "github.com/ngeojiajun/go-filecrypt/internal/cipher"
 	container_internal "github.com/ngeojiajun/go-filecrypt/internal/container"
+	_io "github.com/ngeojiajun/go-filecrypt/internal/io"
 	types "github.com/ngeojiajun/go-filecrypt/pkg/types"
 )
 
@@ -222,6 +224,31 @@ func (f *ContainerFile) DecryptStream(writer io.Writer) error {
 	}
 	_, err = ic.AESCTRStreamDecryptAuthenticatedEx(keys[0], iv, keys[1], f.file, writer)
 	return err
+}
+
+// Create a stream to decrypt the file
+// Note that the authentication tag would not be verified
+func (f *ContainerFile) AsDecryptionStream() (io.Reader, error) {
+	// For now since the key are AES-CTR based so the path could be simplified
+	// but we should do something with it later on
+	if _, err := f.file.Seek(containerCiphertextOffset, io.SeekStart); err != nil {
+		return nil, err
+	}
+	// the salt is 32 bytes (based on sha256 hash size)
+	salt := make([]byte, 32)
+	iv := make([]byte, 16)
+	if _, err := io.ReadFull(f.file, salt); err != nil {
+		return nil, err
+	}
+	if _, err := io.ReadFull(f.file, iv); err != nil {
+		return nil, err
+	}
+	keys, err := ic.DeriveKeysFromMasterKeyEx(f.rootKey, salt, []int{f.header.Algorithm.KeySize()})
+	if err != nil {
+		return nil, err
+	}
+	reader := _io.NewTailReader(f.file, sha256.Size)
+	return ic.NewAESCTRStreamReader(reader, keys[0], iv)
 }
 
 // Close the file
