@@ -228,7 +228,7 @@ func (f *ContainerFile) DecryptStream(writer io.Writer) error {
 
 // Create a stream to decrypt the file
 // Note that the authentication tag would not be verified
-func (f *ContainerFile) AsDecryptionStream() (io.Reader, error) {
+func (f *ContainerFile) AsDecryptionStream() (io.ReadCloser, error) {
 	// For now since the key are AES-CTR based so the path could be simplified
 	// but we should do something with it later on
 	if _, err := f.file.Seek(containerCiphertextOffset, io.SeekStart); err != nil {
