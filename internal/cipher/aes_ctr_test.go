@@ -41,7 +41,7 @@ func TestAESCTRCipherStreaming(t *testing.T) {
 
 	ciphertextReader := bytes.NewBuffer(ciphertext)
 	decrypted := bytes.NewBuffer(nil)
-	decryptionStream, err := ic.NewAESCTRStreamReader(ciphertextReader, key, iv)
+	decryptionStream, err := ic.NewAESCTRStreamReader(ciphertextReader, key, iv, nil)
 	assert.NoError(t, err, "Cannot create decryption stream")
 	_, err = io.Copy(decrypted, decryptionStream)
 	assert.NoError(t, err, "Decryption failed")

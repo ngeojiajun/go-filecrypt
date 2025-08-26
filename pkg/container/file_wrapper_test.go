@@ -35,6 +35,9 @@ func TestFileWrapperSanity(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
 	encryptedContainer.DecryptStream(buf)
 	assert.Equal(t, plainText, buf.String(), "The decryption should give back the same content :-)")
+	size, err := encryptedContainer.EstimateContentSize()
+	assert.NoError(t, err, "cannot estimate file size")
+	assert.Equal(t, len([]byte(plainText)), int(size))
 }
 
 func TestFileWrapperSanity2(t *testing.T) {
@@ -63,6 +66,7 @@ func TestFileWrapperSanity2(t *testing.T) {
 	_, err = io.Copy(buf, stream)
 	assert.NoError(t, err, "cannot decrypt the data")
 	assert.Equal(t, plainText, buf.String(), "The decryption should give back the same content :-)")
+	encryptedContainer.Close()
 }
 
 // Same TestFileWrapperSanity but the a separated handle is opened for decryption
@@ -98,6 +102,7 @@ func TestFileWrapperSeparated(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
 	encryptedContainer.DecryptStream(buf)
 	assert.Equal(t, plainText, buf.String(), "The decryption should give back the same content :-)")
+	encryptedContainer.Close()
 }
 
 func TestFileWrapperMultiSlot(t *testing.T) {
@@ -138,6 +143,7 @@ func TestFileWrapperMultiSlot(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
 	encryptedContainer.DecryptStream(buf)
 	assert.Equal(t, plainText, buf.String(), "The decryption should give back the same content :-)")
+	encryptedContainer.Close()
 }
 
 // Same but there are slot that were killed
@@ -180,4 +186,5 @@ func TestFileWrapperMultiSlot2(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
 	encryptedContainer.DecryptStream(buf)
 	assert.Equal(t, plainText, buf.String(), "The decryption should give back the same content :-)")
+	encryptedContainer.Close()
 }

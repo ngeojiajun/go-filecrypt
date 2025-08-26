@@ -45,10 +45,11 @@ func aesCTRNewStream(key, iv []byte) (stream cipher.Stream, err error) {
 type AESCTRStreamReader struct {
 	base    io.Reader
 	context cipher.Stream
+	closer  io.Closer
 }
 
-// Create a new stream reader
-func NewAESCTRStreamReader(underlaying io.Reader, key, iv []byte) (*AESCTRStreamReader, error) {
+// Create a new stream reader, optionally provide close handle
+func NewAESCTRStreamReader(underlaying io.Reader, key, iv []byte, closer io.Closer) (*AESCTRStreamReader, error) {
 	context, err := aesCTRNewStream(key, iv)
 	if err != nil {
 		return nil, err
@@ -56,6 +57,7 @@ func NewAESCTRStreamReader(underlaying io.Reader, key, iv []byte) (*AESCTRStream
 	return &AESCTRStreamReader{
 		base:    underlaying,
 		context: context,
+		closer:  closer,
 	}, nil
 }
 
@@ -65,6 +67,13 @@ func (ctx *AESCTRStreamReader) Read(p []byte) (int, error) {
 		ctx.context.XORKeyStream(p[:n], p[:n])
 	}
 	return n, err
+}
+
+func (ctx *AESCTRStreamReader) Close() error {
+	if ctx.closer != nil {
+		return ctx.closer.Close()
+	}
+	return nil
 }
 
 // AESCTREncryptDirect encrypts plaintext using AES CTR with the provided key and iv.

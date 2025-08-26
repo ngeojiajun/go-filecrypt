@@ -248,7 +248,7 @@ func (f *ContainerFile) AsDecryptionStream() (io.Reader, error) {
 		return nil, err
 	}
 	reader := _io.NewTailReader(f.file, sha256.Size)
-	return ic.NewAESCTRStreamReader(reader, keys[0], iv)
+	return ic.NewAESCTRStreamReader(reader, keys[0], iv, f)
 }
 
 // Close the file
@@ -257,4 +257,13 @@ func (f *ContainerFile) Close() error {
 		return f.file.Close()
 	}
 	return nil
+}
+
+func (f *ContainerFile) EstimateContentSize() (int64, error) {
+	info, err := f.file.Stat()
+	if err != nil {
+		return -1, err
+	}
+	size := info.Size()
+	return size - containerCiphertextOffset - 48 - 32, nil
 }
