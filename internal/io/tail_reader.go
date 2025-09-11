@@ -27,7 +27,7 @@ func NewTailReader(r io.Reader, size int) *TailReader {
 func (tr *TailReader) Read(p []byte) (int, error) {
 	// Fill from underlying reader
 	for len(tr.queue) < len(p) && !tr.readEOF {
-		tmp := make([]byte, 3*tr.size) // Read more than needed to ensure we have enough data
+		tmp := make([]byte, max(3*tr.size, 4096)) // Read more than needed to ensure we have enough data
 		n, err := tr.r.Read(tmp)
 		if n > 0 {
 			data := tmp[:n]
