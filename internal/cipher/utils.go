@@ -12,11 +12,14 @@ import (
 	"fmt"
 	"io"
 	"runtime"
+	_ "unsafe"
 
 	"golang.org/x/crypto/hkdf"
 )
 
 // AESVerifyKeySize checks if the provided key is a valid AES key size.
+//
+//go:linkname AESVerifyKeySize github.com/ngeojiajun/go-filecrypt/pkg/utils.AESVerifyKeySize
 func AESVerifyKeySize(key []byte) error {
 	if key == nil {
 		return ErrKeyMissing
@@ -42,6 +45,8 @@ func HMACCompute(key, iv, data []byte) ([]byte, error) {
 
 // GenerateRandomBytes generates a slice of random bytes of the specified length.
 // It returns an error if the length is invalid or if random byte generation fails.
+//
+//go:linkname GenerateRandomBytes github.com/ngeojiajun/go-filecrypt/pkg/utils.GenerateRandomBytes
 func GenerateRandomBytes(length int) ([]byte, error) {
 	if length <= 0 {
 		return nil, ErrInvalidLength
@@ -92,6 +97,8 @@ func XORKeyStreamApply(stream cipher.Stream, from io.Reader, to io.Writer, bufSi
 
 // DeriveKeysFromMasterKey derives multiple keys from a master key using HKDF.
 // It returns the derived keys, a salt used for key derivation, or an error if the operation fails.
+//
+//go:linkname DeriveKeysFromMasterKey github.com/ngeojiajun/go-filecrypt/pkg/utils.DeriveKeysFromMasterKey
 func DeriveKeysFromMasterKey(masterKey []byte, keySizes []int) (keys [][]byte, salt []byte, err error) {
 	if len(masterKey) == 0 {
 		return nil, nil, ErrInvalidLength
@@ -106,6 +113,8 @@ func DeriveKeysFromMasterKey(masterKey []byte, keySizes []int) (keys [][]byte, s
 
 // DeriveKeysFromMasterKeyEx derives multiple keys from a master key using HKDF and salt.
 // It returns the derived keys, or an error if the operation fails.
+//
+//go:linkname DeriveKeysFromMasterKeyEx github.com/ngeojiajun/go-filecrypt/pkg/utils.DeriveKeysFromMasterKeyEx
 func DeriveKeysFromMasterKeyEx(masterKey, salt []byte, keySizes []int) (keys [][]byte, err error) {
 	if len(masterKey) == 0 {
 		return nil, ErrInvalidLength
@@ -133,6 +142,7 @@ func DeriveKeysFromMasterKeyEx(masterKey, salt []byte, keySizes []int) (keys [][
 // Securely wipe the content of a buffer
 //
 //go:noinline
+//go:linkname WipeBufferSecure github.com/ngeojiajun/go-filecrypt/pkg/utils.WipeBufferSecure
 func WipeBufferSecure(buf []byte) {
 	if buf == nil {
 		return
