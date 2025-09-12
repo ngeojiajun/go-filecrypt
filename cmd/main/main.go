@@ -4,6 +4,7 @@ package main
 // A small demo program to show its functionality
 
 import (
+	"bufio"
 	"encoding/hex"
 	"flag"
 	"fmt"
@@ -14,6 +15,8 @@ import (
 	"github.com/ngeojiajun/go-filecrypt/pkg/container"
 	types "github.com/ngeojiajun/go-filecrypt/pkg/types"
 )
+
+const BufSize = 4096 * 4 // 4 * 4kb pages
 
 type Config struct {
 	Overwrite bool
@@ -164,7 +167,7 @@ func ProcessEncryption(cfg *Config) error {
 		return fmt.Errorf("IO error happened, while creating the file (%s): %v", cfg.From, err)
 	}
 	defer plaintext.Close() // Auto close it
-	err = fileContainer.EncryptStream(plaintext)
+	err = fileContainer.EncryptStream(bufio.NewReaderSize(plaintext, BufSize))
 	return err
 }
 
@@ -189,7 +192,11 @@ func ProcessDecryption(cfg *Config) error {
 	if err != nil {
 		return fmt.Errorf("IO error happened, while creating the file (%s): %v", cfg.To, err)
 	}
+	plaintextBuffered := bufio.NewWriterSize(plaintext, BufSize)
 	defer plaintext.Close() // Auto close it
 	err = fileContainer.DecryptStream(plaintext)
+	if err == nil {
+		err = plaintextBuffered.Flush()
+	}
 	return err
 }

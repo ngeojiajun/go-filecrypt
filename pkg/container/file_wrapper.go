@@ -1,6 +1,7 @@
 package container
 
 import (
+	"bufio"
 	"crypto/sha256"
 	"errors"
 	"io"
@@ -18,6 +19,7 @@ import (
 const (
 	containerCiphertextOffset = 4096 // Offset to real cipher text
 	authKeySize               = 32
+	bufferSize                = 4096 * 4
 )
 
 var (
@@ -191,16 +193,19 @@ func (f *ContainerFile) EncryptStream(reader io.Reader) error {
 	if err != nil {
 		return err
 	}
+	file_buffered := bufio.NewWriterSize(f.file, bufferSize)
 	// Write down the salt first
-	if _, err := f.file.Write(salt); err != nil {
+	if _, err := file_buffered.Write(salt); err != nil {
 		return err
 	}
 	// Also the IV
-	if _, err := f.file.Write(iv); err != nil {
+	if _, err := file_buffered.Write(iv); err != nil {
 		return err
 	}
-	_, err = ic.AESCTRStreamEncryptAuthenticatedEx(keys[0], iv, keys[1], reader, f.file)
-	return err
+	if _, err = ic.AESCTRStreamEncryptAuthenticatedEx(keys[0], iv, keys[1], reader, file_buffered); err != nil {
+		return err
+	}
+	return file_buffered.Flush()
 }
 
 func (f *ContainerFile) DecryptStream(writer io.Writer) error {
@@ -209,20 +214,21 @@ func (f *ContainerFile) DecryptStream(writer io.Writer) error {
 	if _, err := f.file.Seek(containerCiphertextOffset, io.SeekStart); err != nil {
 		return err
 	}
+	file_buffered := bufio.NewReaderSize(f.file, bufferSize)
 	// the salt is 32 bytes (based on sha256 hash size)
 	salt := make([]byte, 32)
 	iv := make([]byte, 16)
-	if _, err := io.ReadFull(f.file, salt); err != nil {
+	if _, err := io.ReadFull(file_buffered, salt); err != nil {
 		return err
 	}
-	if _, err := io.ReadFull(f.file, iv); err != nil {
+	if _, err := io.ReadFull(file_buffered, iv); err != nil {
 		return err
 	}
 	keys, err := ic.DeriveKeysFromMasterKeyEx(f.rootKey, salt, []int{f.header.Algorithm.KeySize(), authKeySize})
 	if err != nil {
 		return err
 	}
-	_, err = ic.AESCTRStreamDecryptAuthenticatedEx(keys[0], iv, keys[1], f.file, writer)
+	_, err = ic.AESCTRStreamDecryptAuthenticatedEx(keys[0], iv, keys[1], file_buffered, writer)
 	return err
 }
 
@@ -234,20 +240,21 @@ func (f *ContainerFile) AsDecryptionStream() (io.ReadCloser, error) {
 	if _, err := f.file.Seek(containerCiphertextOffset, io.SeekStart); err != nil {
 		return nil, err
 	}
+	file_buffered := bufio.NewReaderSize(f.file, bufferSize)
 	// the salt is 32 bytes (based on sha256 hash size)
 	salt := make([]byte, 32)
 	iv := make([]byte, 16)
-	if _, err := io.ReadFull(f.file, salt); err != nil {
+	if _, err := io.ReadFull(file_buffered, salt); err != nil {
 		return nil, err
 	}
-	if _, err := io.ReadFull(f.file, iv); err != nil {
+	if _, err := io.ReadFull(file_buffered, iv); err != nil {
 		return nil, err
 	}
 	keys, err := ic.DeriveKeysFromMasterKeyEx(f.rootKey, salt, []int{f.header.Algorithm.KeySize()})
 	if err != nil {
 		return nil, err
 	}
-	reader := _io.NewTailReader(f.file, sha256.Size)
+	reader := _io.NewTailReader(file_buffered, sha256.Size)
 	return ic.NewAESCTRStreamReader(reader, keys[0], iv, f)
 }
 
