@@ -35,26 +35,32 @@ func TestCorrectNess(t *testing.T) {
 	assert.Equal(t, testPayload[idx:], tail)
 }
 
-func BenchmarkTailReader(b *testing.B) {
-	testPayload, err := utils.GenerateRandomBytes(60 * 4096) // 60 pages
-	assert.NoError(b, err, "cannot generate random bytes for testing")
-	bufSizes := []int{1024, 2048, 4096, 8192}
-	for _, size := range bufSizes {
-		b.Run(fmt.Sprintf("Buffer Size = %d", size), func(b *testing.B) {
-			tmp := make([]byte, 1024) // 0.25 pages
-			idx := 0
-			b.ResetTimer()
-			for b.Loop() {
+func BenchmarkTailReader(rootB *testing.B) {
+	pages := []int{60, 600, 6000}
+	for _, p := range pages {
+		testPayload, err := utils.GenerateRandomBytes(p * 4096)
+		assert.NoError(rootB, err, "cannot generate random bytes for testing")
+		bufSizes := []int{1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192}
+		for _, size := range bufSizes {
+			rootB.Run(fmt.Sprintf("%d-pages(%dKB)-%dKB-buffer", p, p*4, size), func(b *testing.B) {
+				tmp := make([]byte, size*1024)
 				reader := bytes.NewReader(testPayload)
-				tailReader := _io.NewTailReader(reader, 64)
-				for err == nil {
-					var n int
-					n, err = tailReader.Read(tmp)
-					if n > 0 {
-						idx += n
+				processedBytes := int64(0)
+				b.ResetTimer()
+				for b.Loop() {
+					var err error
+					b.StopTimer()
+					reader.Reset(testPayload)
+					tailReader := _io.NewTailReader(reader, 64)
+					b.StartTimer()
+					for err == nil {
+						var n int
+						n, err = tailReader.Read(tmp)
+						processedBytes += int64(n)
 					}
 				}
-			}
-		})
+				b.ReportMetric(float64(processedBytes)/float64(1024*1024), "MB/s")
+			})
+		}
 	}
 }
