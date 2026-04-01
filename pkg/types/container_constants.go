@@ -30,6 +30,7 @@ type SlotKeyAlgorithm uint16
 // File encryption algorithms
 const (
 	EncAlgAESCTR128 EncryptionAlgorithm = iota // AES CTR 128 encryption algorithm
+	EncAlgAESCTR192                            // AES CTR 192 encryption algorithm
 	EncAlgAESCTR256                            // AES CTR 256 encryption algorithm
 	EncAlgEnd
 )
@@ -39,8 +40,10 @@ func (v EncryptionAlgorithm) KeySize() int {
 	switch v {
 	case EncAlgAESCTR128:
 		return 16
-	case EncAlgAESCTR256:
+	case EncAlgAESCTR192:
 		return 24
+	case EncAlgAESCTR256:
+		return 32
 	default:
 		panic("EncryptionAlgorithm::KeySize called on invalid value")
 	}

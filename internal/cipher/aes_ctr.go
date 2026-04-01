@@ -107,7 +107,7 @@ func AESCTRDecryptDirect(key, ciphertext, iv []byte) (plaintext []byte, err erro
 // Output format: salt (32 bytes) || iv (16 bytes) || ciphertext
 func AESCTREncryptDirectAuthenticated(key, plaintext []byte) (cipherText []byte, err error) {
 	// generate sub keys and iv
-	keys, salt, err := DeriveKeysFromMasterKey(key, []int{32, 16})
+	keys, salt, err := DeriveKeysFromMasterKey(key, []int{32, 32})
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +153,7 @@ func AESCTRDecryptDirectAuthenticated(key, ciphertext []byte) (plaintext []byte,
 	ciphertext = ciphertext[sha256.Size+aes.BlockSize:]
 
 	// Derive keys from the master key using the salt
-	keys, err := DeriveKeysFromMasterKeyEx(key, salt, []int{32, 16})
+	keys, err := DeriveKeysFromMasterKeyEx(key, salt, []int{32, 32})
 	if err != nil {
 		return nil, err
 	}
