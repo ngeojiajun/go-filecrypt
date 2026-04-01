@@ -184,12 +184,6 @@ func AESCTRDecryptDirectAuthenticatedEx(key, ciphertext, iv, authKey []byte) (pl
 //
 // Note: The caller are responsible to save the iv for decryption later. IV must be provided and should be unique for each encryption operation.
 func AESCTRStreamEncryptAuthenticatedEx(key, iv, authKey []byte, plaintext io.Reader, ciphertext io.Writer) (bytesProcessed int64, err error) {
-	return AESCTRStreamEncryptAuthenticatedExWithBuffer(key, iv, authKey, plaintext, ciphertext, make([]byte, streamBufferSize))
-}
-
-// AESCTRStreamEncryptAuthenticatedExWithBuffer encrypts plaintext from a reader using AES CTR with the provided key, iv, and authentication key.
-// It allows the caller to provide a buffer for the encryption process.
-func AESCTRStreamEncryptAuthenticatedExWithBuffer(key, iv, authKey []byte, plaintext io.Reader, ciphertext io.Writer, buf []byte) (bytesProcessed int64, err error) {
 	if bytes.Equal(key, authKey) {
 		return 0, ErrAuthenticationKeyReused
 	}
@@ -203,7 +197,7 @@ func AESCTRStreamEncryptAuthenticatedExWithBuffer(key, iv, authKey []byte, plain
 	// Use MultiWriter to write both ciphertext and HMAC at the same time
 	// This allows us to compute the HMAC while writing the ciphertext.
 	innerCipherTextWriter := io.MultiWriter(ciphertext, h)
-	bytesProcessed, err = XORKeyStreamApply(stream, plaintext, innerCipherTextWriter, buf)
+	bytesProcessed, err = XORKeyStreamApply(stream, plaintext, innerCipherTextWriter, streamBufferSize)
 	if err != nil {
 		return
 	}
@@ -220,12 +214,6 @@ func AESCTRStreamEncryptAuthenticatedExWithBuffer(key, iv, authKey []byte, plain
 //
 // Important: The authentication key should be different from the encryption key to ensure security. IV must be provided and should be unique for each decryption operation.
 func AESCTRStreamDecryptAuthenticatedEx(key, iv, authKey []byte, ciphertext io.Reader, plaintext io.Writer) (bytesProcessed int64, err error) {
-	return AESCTRStreamDecryptAuthenticatedExWithBuffer(key, iv, authKey, ciphertext, plaintext, make([]byte, streamBufferSize))
-}
-
-// AESCTRStreamDecryptAuthenticatedExWithBuffer decrypts ciphertext from a reader using AES CTR with the provided key, iv, and authentication key.
-// It allows the caller to provide a buffer for the decryption process.
-func AESCTRStreamDecryptAuthenticatedExWithBuffer(key, iv, authKey []byte, ciphertext io.Reader, plaintext io.Writer, buf []byte) (bytesProcessed int64, err error) {
 	if bytes.Equal(key, authKey) {
 		return 0, ErrAuthenticationKeyReused
 	}
@@ -240,7 +228,7 @@ func AESCTRStreamDecryptAuthenticatedExWithBuffer(key, iv, authKey []byte, ciphe
 	// This allows us to verify the HMAC after decryption.
 	// We will then wrap this into TailReader to ensure we can read the last bytes for HMAC verification.
 	innerCipherTextReader := _io.NewTailReader(ciphertext, sha256.Size)
-	bytesProcessed, err = XORKeyStreamApply(stream, io.TeeReader(innerCipherTextReader, h), plaintext, buf)
+	bytesProcessed, err = XORKeyStreamApply(stream, io.TeeReader(innerCipherTextReader, h), plaintext, streamBufferSize)
 	if err != nil {
 		return
 	}

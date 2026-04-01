@@ -202,8 +202,7 @@ func (f *ContainerFile) EncryptStream(reader io.Reader) error {
 	if _, err := file_buffered.Write(iv); err != nil {
 		return err
 	}
-	buf := make([]byte, bufferSize)
-	if _, err = ic.AESCTRStreamEncryptAuthenticatedExWithBuffer(keys[0], iv, keys[1], reader, file_buffered, buf); err != nil {
+	if _, err = ic.AESCTRStreamEncryptAuthenticatedEx(keys[0], iv, keys[1], reader, file_buffered); err != nil {
 		return err
 	}
 	return file_buffered.Flush()
@@ -229,8 +228,7 @@ func (f *ContainerFile) DecryptStream(writer io.Writer) error {
 	if err != nil {
 		return err
 	}
-	buf := make([]byte, bufferSize)
-	_, err = ic.AESCTRStreamDecryptAuthenticatedExWithBuffer(keys[0], iv, keys[1], file_buffered, writer, buf)
+	_, err = ic.AESCTRStreamDecryptAuthenticatedEx(keys[0], iv, keys[1], file_buffered, writer)
 	return err
 }
 

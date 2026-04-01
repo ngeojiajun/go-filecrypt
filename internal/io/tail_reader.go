@@ -18,20 +18,11 @@ type TailReader struct {
 
 // NewTailReader wraps r so that the last size bytes are withheld.
 func NewTailReader(r io.Reader, size int) *TailReader {
-	return NewTailReaderWithBuffer(r, size, make([]byte, max(size, 3*4096)))
-}
-
-// NewTailReaderWithBuffer wraps r so that the last size bytes are withheld.
-// It allows the caller to provide a buffer for the queue to prevent sensitive data leakage.
-func NewTailReaderWithBuffer(r io.Reader, size int, buffer []byte) *TailReader {
-	if len(buffer) < size {
-		panic("TailReader: buffer size must be at least the tail size")
-	}
 	return &TailReader{
 		r:     r,
 		buf:   make([]byte, 0, size),
 		size:  size,
-		queue: buffer,
+		queue: make([]byte, max(size, 3*4096)), // 3 pages
 	}
 }
 
