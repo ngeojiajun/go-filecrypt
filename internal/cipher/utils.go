@@ -71,11 +71,10 @@ func GenerateAESIV() ([]byte, error) {
 // XORKeyStreamApply applies the XOR operation on a stream using the provided cipher.Stream.
 // It reads from the provided io.Reader and writes to the io.Writer, returning the total number
 // of bytes written or an error if the operation fails.
-func XORKeyStreamApply(stream cipher.Stream, from io.Reader, to io.Writer, bufSize int) (int64, error) {
-	if bufSize <= 0 {
+func XORKeyStreamApply(stream cipher.Stream, from io.Reader, to io.Writer, buf []byte) (int64, error) {
+	if len(buf) <= 0 {
 		return 0, ErrInvalidLength
 	}
-	buf := make([]byte, bufSize)
 	var totalBytesWritten int64
 	for {
 		n, err := from.Read(buf)

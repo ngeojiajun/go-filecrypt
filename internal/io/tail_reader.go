@@ -18,11 +18,20 @@ type TailReader struct {
 
 // NewTailReader wraps r so that the last size bytes are withheld.
 func NewTailReader(r io.Reader, size int) *TailReader {
+	return NewTailReaderWithBuffer(r, size, make([]byte, max(size, 3*4096)))
+}
+
+// NewTailReaderWithBuffer wraps r so that the last size bytes are withheld.
+// It allows the caller to provide a buffer for the queue to prevent sensitive data leakage.
+func NewTailReaderWithBuffer(r io.Reader, size int, buffer []byte) *TailReader {
+	if len(buffer) < size {
+		panic("TailReader: buffer size must be at least the tail size")
+	}
 	return &TailReader{
 		r:     r,
 		buf:   make([]byte, 0, size),
 		size:  size,
-		queue: make([]byte, max(size, 3*4096)), // 3 pages
+		queue: buffer,
 	}
 }
 
@@ -82,16 +91,34 @@ func (tr *TailReader) Read(p []byte) (int, error) {
 			tr.slideBuffer()
 		}
 	}
-	if tr.buffered() == 0 && copied == 0 {
+	if tr.buffered() <= 0 && copied == 0 {
 		if tr.readEOF {
+			// Steal some bytes for buffer
+			if tr.fillHead >= tr.size {
+				tr.buf = tr.buf[:tr.size]
+				copy(tr.buf, tr.queue[tr.fillHead-tr.size:tr.fillHead])
+				tr.fillHead -= tr.size
+			} else {
+				// If input is smaller than tail size, move all to tr.buf
+				tr.buf = tr.buf[:tr.fillHead]
+				copy(tr.buf, tr.queue[:tr.fillHead])
+				tr.fillHead = 0
+			}
 			return 0, io.EOF
 		}
 		return 0, nil
 	}
 	// Steal some bytes for buffer
-	tr.buf = tr.buf[:tr.size]
-	copy(tr.buf, tr.queue[tr.fillHead-tr.size:tr.fillHead])
-	tr.fillHead -= tr.size
+	if tr.fillHead >= tr.size {
+		tr.buf = tr.buf[:tr.size]
+		copy(tr.buf, tr.queue[tr.fillHead-tr.size:tr.fillHead])
+		tr.fillHead -= tr.size
+	} else if tr.readEOF {
+		// If input is smaller than tail size, move all to tr.buf
+		tr.buf = tr.buf[:tr.fillHead]
+		copy(tr.buf, tr.queue[:tr.fillHead])
+		tr.fillHead = 0
+	}
 	return copied, nil
 }
 
@@ -101,8 +128,7 @@ func (tr *TailReader) Tail() ([]byte, error) {
 		// force read underlying until EOF
 		_, _ = io.Copy(io.Discard, tr)
 	}
-	if len(tr.buf) < tr.size {
-		return nil, io.ErrUnexpectedEOF
-	}
+	// The caller should know that if the stream was shorter than size,
+	// Tail will return fewer than size bytes.
 	return append([]byte(nil), tr.buf...), nil
 }
