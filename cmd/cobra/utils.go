@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	types "github.com/ngeojiajun/go-filecrypt/pkg/types"
 	"github.com/spf13/cobra"
 )
 
@@ -13,6 +14,7 @@ type Config struct {
 	Key       []byte
 	From      string
 	To        string
+	SlotAlg   types.SlotKeyAlgorithm
 }
 
 const BufSize = 4096 * 4 // 4 * 4kb pages

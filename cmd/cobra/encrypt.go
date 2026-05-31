@@ -24,6 +24,7 @@ var (
 	encryptKey       string
 	encryptFrom      string
 	encryptTo        string
+	encryptAlg       types.SlotKeyAlgorithm
 )
 
 func init() {
@@ -36,8 +37,15 @@ func encrypt(cmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatalf("invalid hex key: %v", err)
 	}
-	if len(key) != types.SlotKeyAlgAESGCM128.KeySize() {
-		log.Fatalf("invalid key length: expected %d hex characters", 2*types.SlotKeyAlgAESGCM128.KeySize())
+
+	for _, alg := range []types.SlotKeyAlgorithm{types.SlotKeyAlgAESGCM128, types.SlotKeyAlgAESGCM256} {
+		if alg.KeySize() == len(key) {
+			encryptAlg = alg
+			break
+		}
+	}
+	if encryptAlg == types.SlotKeyAlgEnd {
+		log.Fatalf("invalid key length: expected %d or %d hex characters", 2*types.SlotKeyAlgAESGCM128.KeySize(), 2*types.SlotKeyAlgAESGCM256.KeySize())
 	}
 
 	cfg := &Config{
@@ -45,6 +53,7 @@ func encrypt(cmd *cobra.Command, args []string) {
 		Overwrite: encryptOverwrite,
 		From:      encryptFrom,
 		To:        encryptTo,
+		SlotAlg:   encryptAlg,
 	}
 
 	validateFlags(cfg)
@@ -63,7 +72,7 @@ func ProcessEncryption(cfg *Config) error {
 	if err != nil {
 		return fmt.Errorf("IO error happened, while creating the file: %v", err)
 	}
-	err = fileContainer.AddKeySlot(types.SlotKeyAlgAESGCM128, cfg.Key)
+	err = fileContainer.AddKeySlot(cfg.SlotAlg, cfg.Key)
 	if err == nil {
 		err = fileContainer.WriteHeader()
 	}

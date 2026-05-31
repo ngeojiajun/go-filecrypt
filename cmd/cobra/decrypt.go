@@ -36,8 +36,14 @@ func decrypt(cmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatalf("invalid hex key: %v", err)
 	}
-	if len(key) != types.SlotKeyAlgAESGCM128.KeySize() {
-		log.Fatalf("invalid key length: expected %d hex characters", 2*types.SlotKeyAlgAESGCM128.KeySize())
+	alg := types.SlotKeyAlgAESGCM128
+	for _, alg := range []types.SlotKeyAlgorithm{types.SlotKeyAlgAESGCM128, types.SlotKeyAlgAESGCM256} {
+		if alg.KeySize() == len(key) {
+			break
+		}
+	}
+	if alg == types.SlotKeyAlgEnd {
+		log.Fatalf("invalid key length: expected %d or %d hex characters", 2*types.SlotKeyAlgAESGCM128.KeySize(), 2*types.SlotKeyAlgAESGCM256.KeySize())
 	}
 
 	cfg := &Config{
@@ -45,6 +51,7 @@ func decrypt(cmd *cobra.Command, args []string) {
 		Overwrite: decryptOverwrite,
 		From:      decryptFrom,
 		To:        decryptTo,
+		SlotAlg:   alg,
 	}
 
 	validateFlags(cfg)
@@ -63,7 +70,7 @@ func ProcessDecryption(cfg *Config) error {
 	if err != nil {
 		return fmt.Errorf("error happened, while opening the file: %v", err)
 	}
-	err = fileContainer.Unseal(types.SlotKeyAlgAESGCM128, cfg.Key)
+	err = fileContainer.Unseal(cfg.SlotAlg, cfg.Key)
 	if err != nil {
 		return fmt.Errorf("error happened, while unsealing the file: %v", err)
 	}
