@@ -52,6 +52,7 @@ func (v EncryptionAlgorithm) KeySize() int {
 // Slot key algorithms
 const (
 	SlotKeyAlgAESGCM128 SlotKeyAlgorithm = iota // Direct AES-128 key is used to decrypt the slot in GCM mode
+	SlotKeyAlgAESGCM256
 	SlotKeyAlgEnd
 )
 
@@ -60,6 +61,8 @@ func (v SlotKeyAlgorithm) KeySize() int {
 	switch v {
 	case SlotKeyAlgAESGCM128:
 		return 16
+	case SlotKeyAlgAESGCM256:
+		return 32
 	default:
 		panic("SlotKeyAlgorithm::KeySize called on invalid value")
 	}

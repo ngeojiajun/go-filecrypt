@@ -40,6 +40,8 @@ func NewContainerKeySlot(alg types.SlotKeyAlgorithm, flags uint16, rootKey, slot
 	}
 	switch alg {
 	case types.SlotKeyAlgAESGCM128:
+		fallthrough
+	case types.SlotKeyAlgAESGCM256:
 		if len(slotKey) != alg.KeySize() {
 			return nil, ic.ErrKeySizeInvalid
 		}
@@ -47,6 +49,7 @@ func NewContainerKeySlot(alg types.SlotKeyAlgorithm, flags uint16, rootKey, slot
 		if err != nil {
 			return nil, err
 		}
+
 	default:
 		return nil, types.ErrUnsupportedSlotAlgo
 	}
@@ -70,6 +73,11 @@ func (slot *ContainerKeySlot) Unseal(slotkey []byte) (rootkey []byte, err error)
 	}
 	switch slot.SlotKeyAlgorithm {
 	case types.SlotKeyAlgAESGCM128:
+		fallthrough
+	case types.SlotKeyAlgAESGCM256:
+		if len(slotkey) != slot.SlotKeyAlgorithm.KeySize() {
+			return nil, ic.ErrKeySizeInvalid
+		}
 		return ic.AESGCMDecryptDirect(slotkey, slot.SlotContent, nil)
 	default:
 		return nil, types.ErrUnsupportedSlotAlgo
